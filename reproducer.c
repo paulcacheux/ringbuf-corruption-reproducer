@@ -21,11 +21,9 @@ const struct event *unused __attribute__((unused));
 SEC("xdp")
 int ringbuf_filler(struct pt_regs *ctx) {
 	u32 size = bpf_get_prandom_u32() % PAYLOAD_SIZE;
-	if (size == 0) {
-		size = PAYLOAD_SIZE;
-	}
 
 	struct event evt = {0};
+	__builtin_memset(&evt, size, PAYLOAD_SIZE);
 	bpf_ringbuf_output(&events, &evt, size, 0);
 	return 0;
 }

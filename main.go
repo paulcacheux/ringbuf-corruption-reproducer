@@ -91,7 +91,7 @@ func main() {
 		}
 
 		for _, b := range record.RawSample {
-			if b != 0 {
+			if int(b) != len(record.RawSample) {
 				log.Fatalf("corruption detected: %+v", event.Payload)
 			}
 		}
