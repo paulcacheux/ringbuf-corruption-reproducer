@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"errors"
 	"log"
@@ -9,7 +10,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/ringbuf"
 	"github.com/cilium/ebpf/rlimit"
 )
@@ -17,9 +17,6 @@ import (
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -type event bpf reproducer.c -- -I./headers
 
 func main() {
-	// Name of the kernel function to trace.
-	fn := "sys_execve"
-
 	// Subscribe to signals for terminating the program.
 	stopper := make(chan os.Signal, 1)
 	signal.Notify(stopper, os.Interrupt, syscall.SIGTERM)
@@ -36,15 +33,6 @@ func main() {
 	}
 	defer objs.Close()
 
-	// Open a Kprobe at the entry point of the kernel function and attach the
-	// pre-compiled program. Each time the kernel function enters, the program
-	// will emit an event containing pid and command of the execved task.
-	kp, err := link.Kprobe(fn, objs.KprobeExecve, nil)
-	if err != nil {
-		log.Fatalf("opening kprobe: %s", err)
-	}
-	defer kp.Close()
-
 	// Open a ringbuf reader from userspace RINGBUF map described in the
 	// eBPF C program.
 	rd, err := ringbuf.NewReader(objs.Events)
@@ -53,13 +41,32 @@ func main() {
 	}
 	defer rd.Close()
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	// Close the reader when the process receives a signal, which will exit
 	// the read loop.
 	go func() {
 		<-stopper
 
+		cancel()
+
 		if err := rd.Close(); err != nil {
 			log.Fatalf("closing ringbuf reader: %s", err)
+		}
+	}()
+
+	go func() {
+		buf := make([]byte, 32)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				_, _, err := objs.RingbufFiller.Test(buf)
+				if err != nil {
+					log.Printf("test failed: %s", err)
+				}
+			}
 		}
 	}()
 

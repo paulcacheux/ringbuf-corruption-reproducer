@@ -16,8 +16,8 @@ struct {
 // Force emitting struct event into the ELF.
 const struct event *unused __attribute__((unused));
 
-SEC("kprobe/sys_execve")
-int kprobe_execve(struct pt_regs *ctx) {
+SEC("xdp")
+int ringbuf_filler(struct pt_regs *ctx) {
 	struct event evt = {0};
 	bpf_ringbuf_output(&events, &evt, sizeof(struct event), 0);
 	return 0;

@@ -55,7 +55,7 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	KprobeExecve *ebpf.ProgramSpec `ebpf:"kprobe_execve"`
+	RingbufFiller *ebpf.ProgramSpec `ebpf:"ringbuf_filler"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -97,12 +97,12 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	KprobeExecve *ebpf.Program `ebpf:"kprobe_execve"`
+	RingbufFiller *ebpf.Program `ebpf:"ringbuf_filler"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
-		p.KprobeExecve,
+		p.RingbufFiller,
 	)
 }
 
