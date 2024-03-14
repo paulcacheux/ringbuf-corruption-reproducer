@@ -4,8 +4,10 @@
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
+#define PAYLOAD_SIZE 64
+
 struct event {
-	u8 payload[8];
+	u8 payload[PAYLOAD_SIZE];
 };
 
 struct {
@@ -18,7 +20,12 @@ const struct event *unused __attribute__((unused));
 
 SEC("xdp")
 int ringbuf_filler(struct pt_regs *ctx) {
+	u32 size = bpf_get_prandom_u32() % PAYLOAD_SIZE;
+	if (size == 0) {
+		size = PAYLOAD_SIZE;
+	}
+
 	struct event evt = {0};
-	bpf_ringbuf_output(&events, &evt, sizeof(struct event), 0);
+	bpf_ringbuf_output(&events, &evt, size, 0);
 	return 0;
 }

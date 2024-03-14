@@ -12,7 +12,7 @@ import (
 	"github.com/cilium/ebpf"
 )
 
-type bpfEvent struct{ Payload [8]uint8 }
+type bpfEvent struct{ Payload [64]uint8 }
 
 // loadBpf returns the embedded CollectionSpec for bpf.
 func loadBpf() (*ebpf.CollectionSpec, error) {
